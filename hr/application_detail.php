@@ -104,18 +104,24 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <div class="mb-3">
                         <small class="text-muted">Portfolio</small>
-                        <p>
-                            <?php if (!empty($application['portfolio_url_snapshot'])): ?>
-                                <a
-                                    href="<?= htmlspecialchars($application['portfolio_url_snapshot']) ?>"
-                                    target="_blank"
-                                    rel="noopener noreferrer">
-                                    Lihat Portfolio
-                                </a>
-                            <?php else: ?>
-                                -
-                            <?php endif; ?>
-                        </p>
+                        <div class="mb-4">
+    <label class="form-label">CV / Resume Kandidat</label>
+
+    <?php if (!empty($application['resume_path'])): ?>
+        <div class="d-flex gap-2 flex-wrap">
+            <a
+                href="<?= BASE_URL ?>/download_cv.php?id=<?= (int) $application['id'] ?>"
+                class="btn btn-primary"
+            >
+                Lihat / Download CV
+            </a>
+        </div>
+    <?php else: ?>
+        <p class="text-danger mb-0">
+            Kandidat belum mengunggah CV.
+        </p>
+    <?php endif; ?>
+</div>
                     </div>
 
                     <div>

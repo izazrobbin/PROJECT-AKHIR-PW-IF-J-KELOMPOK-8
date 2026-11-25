@@ -10,18 +10,28 @@ $flash = get_flash();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARTANA ATS</title>
+    <title>ARTANA CORPORATION</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="<?= BASE_URL ?>/index.php">
-            ARTANA ATS
-        </a>
+<a class="navbar-brand d-flex align-items-center gap-3"
+   href="<?= BASE_URL ?>/index.php">
+
+    <img
+        src="<?= BASE_URL ?>/assets/images/logo.jpeg"
+        alt="Logo ARTANA"
+        style="width: 55px; height: 55px; object-fit: contain;"
+    >
+
+    <span class="fw-bold text-white"
+          style="font-size: 22px; letter-spacing: 1px;">
+        ARTANA ATS
+    </span>
+
+</a>
 
         <button class="navbar-toggler" type="button"
                 data-bs-toggle="collapse"

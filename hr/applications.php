@@ -1,296 +1,429 @@
-```php
 <?php
+
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/db.php';
 
+// Pastikan hanya HR yang dapat membuka halaman ini.
 require_hr();
 
-$applicationId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+// Ambil filter pencarian.
+$keyword = trim($_GET['keyword'] ?? '');
+$statusFilter = trim($_GET['status'] ?? '');
 
-if (!$applicationId || $applicationId < 1) {
-    set_flash('danger', 'ID lamaran tidak valid.');
-    redirect(BASE_URL . '/hr/applications.php');
+$allowedStatuses = [
+    'Reviewing',
+    'Interview',
+    'Offered',
+    'Rejected'
+];
+
+if (!in_array($statusFilter, $allowedStatuses, true)) {
+    $statusFilter = '';
 }
 
-$stmt = $pdo->prepare("
-    SELECT
-        a.*,
-        j.title AS job_title,
-        j.location_name,
-        j.employment_type,
-        d.name AS department_name
-    FROM applications a
-    INNER JOIN jobs j ON j.id = a.job_id
-    LEFT JOIN departments d ON d.id = j.department_id
-    WHERE a.id = ?
-    LIMIT 1
-");
-$stmt->execute([$applicationId]);
-$application = $stmt->fetch(PDO::FETCH_ASSOC);
+try {
 
-if (!$application) {
-    set_flash('danger', 'Data lamaran tidak ditemukan.');
-    redirect(BASE_URL . '/hr/applications.php');
+    // Query dasar daftar lamaran.
+    $sql = "
+        SELECT
+            a.id,
+            a.application_code,
+            a.candidate_name_snapshot,
+            a.email_snapshot,
+            a.status,
+            a.applied_at,
+            a.resume_path,
+            j.title AS job_title,
+            d.name AS department_name
+
+        FROM applications a
+
+        INNER JOIN jobs j
+            ON j.id = a.job_id
+
+        LEFT JOIN departments d
+            ON d.id = j.department_id
+
+        WHERE 1 = 1
+    ";
+
+    $params = [];
+
+    // Filter berdasarkan status.
+    if ($statusFilter !== '') {
+        $sql .= " AND a.status = ?";
+        $params[] = $statusFilter;
+    }
+
+    // Filter berdasarkan nama, email, kode lamaran, atau lowongan.
+    if ($keyword !== '') {
+        $sql .= "
+            AND (
+                a.candidate_name_snapshot LIKE ?
+                OR a.email_snapshot LIKE ?
+                OR a.application_code LIKE ?
+                OR j.title LIKE ?
+            )
+        ";
+
+        $search = '%' . $keyword . '%';
+
+        $params[] = $search;
+        $params[] = $search;
+        $params[] = $search;
+        $params[] = $search;
+    }
+
+    $sql .= " ORDER BY a.applied_at DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Statistik lamaran.
+    $statsStmt = $pdo->query("
+        SELECT
+            COUNT(*) AS total,
+            SUM(status = 'Reviewing') AS reviewing,
+            SUM(status = 'Interview') AS interview,
+            SUM(status = 'Offered') AS offered,
+            SUM(status = 'Rejected') AS rejected
+        FROM applications
+    ");
+
+    $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+
+    error_log('HR applications error: ' . $e->getMessage());
+
+    require_once __DIR__ . '/../includes/header.php';
+    ?>
+
+    <div class="alert alert-danger">
+        <h5>Gagal Memuat Data Lamaran</h5>
+        <p class="mb-0">
+            Terjadi kesalahan saat mengambil data dari database.
+            Periksa struktur tabel applications dan jobs.
+        </p>
+    </div>
+
+    <?php
+    require_once __DIR__ . '/../includes/footer.php';
+    exit;
 }
-
-$historyStmt = $pdo->prepare("
-    SELECT
-        h.old_status,
-        h.new_status,
-        h.note,
-        h.changed_at,
-        u.full_name AS changed_by_name
-    FROM application_status_history h
-    LEFT JOIN users u ON u.id = h.changed_by
-    WHERE h.application_id = ?
-    ORDER BY h.changed_at DESC
-");
-$historyStmt->execute([$applicationId]);
-$history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
-
-$statuses = ['Reviewing', 'Interview', 'Offered', 'Rejected'];
 
 require_once __DIR__ . '/../includes/header.php';
+
 ?>
 
-<div class="container py-4">
+<div class="container-fluid py-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Judul halaman -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+
         <div>
-            <h3 class="mb-1">Detail Lamaran</h3>
+            <h2 class="fw-bold mb-1">Kelola Lamaran</h2>
+
             <p class="text-muted mb-0">
-                Kode Lamaran:
-                <?= htmlspecialchars($application['application_code']) ?>
+                Kelola dan pantau proses seleksi kandidat ARTANA ATS.
             </p>
         </div>
 
-        <a href="<?= BASE_URL ?>/hr/applications.php"
-           class="btn btn-outline-secondary">
-            Kembali
+        <a
+            href="<?= BASE_URL ?>/hr/dashboard.php"
+            class="btn btn-outline-secondary"
+        >
+            Kembali ke Dashboard
         </a>
+
     </div>
 
-    <div class="row g-4">
+    <!-- Statistik -->
+    <div class="row g-3 mb-4">
 
-        <div class="col-lg-7">
-
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Informasi Kandidat</h5>
-                </div>
-
+        <div class="col-md-6 col-xl">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
+                    <p class="text-muted mb-1">Total Lamaran</p>
 
-                    <div class="mb-3">
-                        <strong>Nama:</strong><br>
-                        <?= htmlspecialchars($application['candidate_name_snapshot'] ?? '-') ?>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong>Email:</strong><br>
-                        <?= htmlspecialchars($application['email_snapshot'] ?? '-') ?>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong>Nomor Telepon:</strong><br>
-                        <?= htmlspecialchars($application['phone_snapshot'] ?? '-') ?>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong>Portfolio:</strong><br>
-
-                        <?php if (!empty($application['portfolio_url_snapshot'])): ?>
-                            <a
-                                href="<?= htmlspecialchars($application['portfolio_url_snapshot']) ?>"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                Lihat Portfolio
-                            </a>
-                        <?php else: ?>
-                            <span class="text-muted">Belum tersedia</span>
-                        <?php endif; ?>
-                    </div>
-
-                    <?php if (!empty($application['resume_path'])): ?>
-                        <div class="mb-3">
-                            <strong>CV Kandidat:</strong><br>
-
-                            <a
-                                href="<?= BASE_URL ?>/download_cv.php?id=<?= (int) $application['id'] ?>"
-                                class="btn btn-primary btn-sm mt-2"
-                            >
-                                Download CV (PDF)
-                            </a>
-                        </div>
-                    <?php else: ?>
-                        <div class="alert alert-warning">
-                            Kandidat belum memiliki CV pada lamaran ini.
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="mb-3">
-                        <strong>Pengalaman / Catatan Kandidat:</strong><br>
-                        <?= nl2br(htmlspecialchars($application['experience_notes'] ?? '-')) ?>
-                    </div>
-
+                    <h3 class="fw-bold mb-0">
+                        <?= (int) ($stats['total'] ?? 0) ?>
+                    </h3>
                 </div>
             </div>
+        </div>
 
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Informasi Lowongan</h5>
-                </div>
-
+        <div class="col-md-6 col-xl">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
+                    <p class="text-muted mb-1">Reviewing</p>
 
-                    <div class="mb-2">
-                        <strong>Posisi:</strong>
-                        <?= htmlspecialchars($application['job_title']) ?>
-                    </div>
-
-                    <div class="mb-2">
-                        <strong>Departemen:</strong>
-                        <?= htmlspecialchars($application['department_name'] ?? '-') ?>
-                    </div>
-
-                    <div class="mb-2">
-                        <strong>Lokasi:</strong>
-                        <?= htmlspecialchars($application['location_name'] ?? '-') ?>
-                    </div>
-
-                    <div class="mb-2">
-                        <strong>Tipe Pekerjaan:</strong>
-                        <?= htmlspecialchars($application['employment_type'] ?? '-') ?>
-                    </div>
-
-                    <div class="mb-2">
-                        <strong>Tanggal Melamar:</strong>
-                        <?= htmlspecialchars($application['applied_at']) ?>
-                    </div>
-
+                    <h3 class="fw-bold text-primary mb-0">
+                        <?= (int) ($stats['reviewing'] ?? 0) ?>
+                    </h3>
                 </div>
             </div>
+        </div>
+
+        <div class="col-md-6 col-xl">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Interview</p>
+
+                    <h3 class="fw-bold text-info mb-0">
+                        <?= (int) ($stats['interview'] ?? 0) ?>
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Offered</p>
+
+                    <h3 class="fw-bold text-success mb-0">
+                        <?= (int) ($stats['offered'] ?? 0) ?>
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Rejected</p>
+
+                    <h3 class="fw-bold text-danger mb-0">
+                        <?= (int) ($stats['rejected'] ?? 0) ?>
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Tabel lamaran -->
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-header bg-white py-3">
+
+            <h5 class="fw-bold mb-0">
+                Daftar Kandidat
+            </h5>
 
         </div>
 
-        <div class="col-lg-5">
+        <div class="card-body">
 
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Perbarui Status Lamaran</h5>
-                </div>
+            <!-- Form pencarian -->
+            <form method="GET" action="" class="row g-2 mb-4">
 
-                <div class="card-body">
+                <div class="col-md-6">
 
-                    <p>
-                        Status saat ini:
-                        <strong>
-                            <?= htmlspecialchars($application['status']) ?>
-                        </strong>
-                    </p>
-
-                    <form
-                        action="<?= BASE_URL ?>/hr/application_update.php"
-                        method="POST"
+                    <input
+                        type="text"
+                        name="keyword"
+                        class="form-control"
+                        placeholder="Cari nama, email, kode lamaran, atau lowongan..."
+                        value="<?= htmlspecialchars($keyword) ?>"
                     >
 
-                        <input
-                            type="hidden"
-                            name="csrf_token"
-                            value="<?= htmlspecialchars(csrf_token()) ?>"
-                        >
-
-                        <input
-                            type="hidden"
-                            name="application_id"
-                            value="<?= (int) $application['id'] ?>"
-                        >
-
-                        <div class="mb-3">
-                            <label class="form-label">Status Baru</label>
-
-                            <select name="status" class="form-select" required>
-                                <?php foreach ($statuses as $status): ?>
-                                    <option
-                                        value="<?= htmlspecialchars($status) ?>"
-                                        <?= $application['status'] === $status ? 'selected' : '' ?>
-                                    >
-                                        <?= htmlspecialchars($status) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Catatan HR</label>
-
-                            <textarea
-                                name="hr_notes"
-                                class="form-control"
-                                rows="4"
-                                placeholder="Tulis catatan untuk proses seleksi..."
-                            ><?= htmlspecialchars($application['hr_notes'] ?? '') ?></textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100">
-                            Simpan Perubahan
-                        </button>
-
-                    </form>
-
-                </div>
-            </div>
-
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Riwayat Status</h5>
                 </div>
 
-                <div class="card-body">
+                <div class="col-md-3">
 
-                    <?php if (empty($history)): ?>
-                        <p class="text-muted mb-0">
-                            Belum ada riwayat perubahan status.
-                        </p>
-                    <?php else: ?>
+                    <select name="status" class="form-select">
 
-                        <?php foreach ($history as $item): ?>
-                            <div class="border-bottom pb-3 mb-3">
+                        <option value="">Semua Status</option>
 
-                                <strong>
-                                    <?= htmlspecialchars($item['old_status'] ?? 'Baru') ?>
-                                    →
-                                    <?= htmlspecialchars($item['new_status']) ?>
-                                </strong>
+                        <?php foreach ($allowedStatuses as $status): ?>
 
-                                <div class="small text-muted mt-1">
-                                    <?= htmlspecialchars($item['changed_at']) ?>
-                                </div>
+                            <option
+                                value="<?= htmlspecialchars($status) ?>"
+                                <?= $statusFilter === $status ? 'selected' : '' ?>
+                            >
+                                <?= htmlspecialchars($status) ?>
+                            </option>
 
-                                <div class="small">
-                                    Oleh:
-                                    <?= htmlspecialchars($item['changed_by_name'] ?? 'HR') ?>
-                                </div>
-
-                                <?php if (!empty($item['note'])): ?>
-                                    <p class="mb-0 mt-2">
-                                        <?= nl2br(htmlspecialchars($item['note'])) ?>
-                                    </p>
-                                <?php endif; ?>
-
-                            </div>
                         <?php endforeach; ?>
 
-                    <?php endif; ?>
+                    </select>
 
                 </div>
+
+                <div class="col-md-3 d-flex gap-2">
+
+                    <button type="submit" class="btn btn-primary">
+                        Cari
+                    </button>
+
+                    <a
+                        href="<?= BASE_URL ?>/hr/applications.php"
+                        class="btn btn-outline-secondary"
+                    >
+                        Reset
+                    </a>
+
+                </div>
+
+            </form>
+
+            <!-- Tabel -->
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-light">
+
+                        <tr>
+                            <th>No.</th>
+                            <th>Kode Lamaran</th>
+                            <th>Nama Kandidat</th>
+                            <th>Email</th>
+                            <th>Posisi</th>
+                            <th>Departemen</th>
+                            <th>Tanggal</th>
+                            <th>Status</th>
+                            <th>CV</th>
+                            <th>Aksi</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <?php if (empty($applications)): ?>
+
+                            <tr>
+                                <td colspan="10" class="text-center py-5">
+
+                                    <h6 class="text-muted">
+                                        Belum ada data lamaran.
+                                    </h6>
+
+                                    <p class="text-muted small mb-0">
+                                        Lamaran kandidat yang masuk akan ditampilkan di sini.
+                                    </p>
+
+                                </td>
+                            </tr>
+
+                        <?php else: ?>
+
+                            <?php foreach ($applications as $index => $application): ?>
+
+                                <?php
+
+                                $statusClass = 'secondary';
+
+                                if ($application['status'] === 'Reviewing') {
+                                    $statusClass = 'primary';
+                                } elseif ($application['status'] === 'Interview') {
+                                    $statusClass = 'info';
+                                } elseif ($application['status'] === 'Offered') {
+                                    $statusClass = 'success';
+                                } elseif ($application['status'] === 'Rejected') {
+                                    $statusClass = 'danger';
+                                }
+
+                                ?>
+
+                                <tr>
+
+                                    <td>
+                                        <?= $index + 1 ?>
+                                    </td>
+
+                                    <td>
+                                        <strong>
+                                            <?= htmlspecialchars($application['application_code']) ?>
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($application['candidate_name_snapshot'] ?? '-') ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($application['email_snapshot'] ?? '-') ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($application['job_title'] ?? '-') ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($application['department_name'] ?? '-') ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($application['applied_at'] ?? '-') ?>
+                                    </td>
+
+                                    <td>
+                                        <span class="badge text-bg-<?= $statusClass ?>">
+                                            <?= htmlspecialchars($application['status']) ?>
+                                        </span>
+                                    </td>
+
+                                    <td>
+
+                                        <?php if (!empty($application['resume_path'])): ?>
+
+                                            <span class="badge text-bg-success">
+                                                Tersedia
+                                            </span>
+
+                                        <?php else: ?>
+
+                                            <span class="badge text-bg-warning">
+                                                Belum ada
+                                            </span>
+
+                                        <?php endif; ?>
+
+                                    </td>
+
+                                    <td>
+
+                                        <a
+                                            href="<?= BASE_URL ?>/hr/application_detail.php?id=<?= (int) $application['id'] ?>"
+                                            class="btn btn-sm btn-primary"
+                                        >
+                                            Detail
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+
+                            <?php endforeach; ?>
+
+                        <?php endif; ?>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="text-muted small mt-3">
+                Total data yang ditampilkan:
+                <strong><?= count($applications) ?></strong> lamaran.
             </div>
 
         </div>
 
     </div>
+
 </div>
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<?php
+
+require_once __DIR__ . '/../includes/footer.php';
+
+?>
 ```
