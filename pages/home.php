@@ -108,10 +108,9 @@ $latestJobs = $stmt->fetchAll();
 
                     <div class="hero-card-icon">
 
-                        <i class="bi bi-people-fill"></i>
+    <img src="assets/images/logo.jpeg" alt="icon">
 
-                    </div>
-
+</div>
                     <h3>Grow With Us</h3>
 
                     <p>

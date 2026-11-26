@@ -12,7 +12,7 @@
     --primary: #142d50;
     --primary-light: #1e416e;
     --secondary: #e8b85b;
-    --background: #f7f9fc;
+    --background: #f1f3f6;
     --text: #26364b;
     --muted: #718096;
     --white: #ffffff;
@@ -40,9 +40,39 @@ a {
 ========================================= */
 
 .main-navbar {
-    background: var(--primary);
-    padding: 16px 0;
+    background-color: #1b365d !important; /* Warna utama bar navbar */
+    padding: 12px 0;
 }
+
+
+.main-navbar .brand-logo-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    background-color: #ffffff;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.main-navbar .brand-title {
+    color: #ffffff;
+    font-size: 20px;
+    letter-spacing: 1px;
+}
+
+.main-navbar .nav-link {
+    color: #ffffff !important;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.main-navbar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #a0e0ef !important;
+}
+
 
 .brand-logo {
     display: flex;
@@ -55,7 +85,7 @@ a {
 }
 
 .brand-logo:hover {
-    color: var(--white);
+    color: var(--primary-light);
 }
 
 .brand-logo small {
@@ -111,14 +141,17 @@ a {
 ========================================= */
 
 .hero-section {
-    background: linear-gradient(
+  background: linear-gradient(
         120deg,
         #142d50,
         #1f4776
     );
-
     color: white;
     padding: 100px 0;
+    margin-right:5px;
+    margin-left: 5px;
+    border-radius: 18px;
+    box-shadow: 0 60px 60px rgba(0,0,0,0.15);;
     overflow: hidden;
 }
 
@@ -196,14 +229,15 @@ a {
 .hero-card {
     background: white;
     color: var(--text);
+    transform: translateX(-20px);
     padding: 35px;
     border-radius: 18px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    box-shadow: 0 60px 60px rgba(0,0,0,0.15);
 }
 
 .hero-card-icon {
-    width: 60px;
-    height: 60px;
+    width: 60px !important;
+    height: 60px !important;
     background: #edf2fa;
     color: var(--primary);
     display: flex;
@@ -212,7 +246,16 @@ a {
     font-size: 27px;
     border-radius: 13px;
     margin-bottom: 22px;
+    overflow: hidden !important;
 }
+
+.hero-card-icon img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block;
+}
+
 
 .hero-card h3 {
     font-size: 25px;
@@ -245,7 +288,7 @@ a {
 ========================================= */
 
 .search-section {
-    margin-top: -40px;
+    margin-top: 40px;
     position: relative;
     z-index: 2;
 }
@@ -253,6 +296,8 @@ a {
 .search-box {
     background: white;
     padding: 25px;
+    margin: 0 auto;
+    width: 100% ;
     border-radius: 12px;
     box-shadow: 0 10px 35px rgba(20,45,80,0.10);
 }
@@ -284,7 +329,7 @@ a {
 ========================================= */
 
 .jobs-section {
-    padding: 85px 0;
+    padding: 60px 0;
 }
 
 .section-heading {
@@ -296,7 +341,7 @@ a {
 }
 
 .section-label {
-    color: #b18a3e;
+    color:var(--primary-light) ;
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 2px;
@@ -306,18 +351,18 @@ a {
 .section-heading-center h2 {
     font-size: 34px;
     font-weight: 800;
-    color: var(--primary);
+    color: var(--primary-light);
     margin: 10px 0;
 }
 
 .section-heading p,
 .section-heading-center p {
-    color: var(--muted);
+    color: var(--primary-light);
     font-size: 14px;
 }
 
 .view-all-link {
-    color: var(--primary);
+    color: var(--primary-light);
     font-weight: 700;
     font-size: 14px;
     white-space: nowrap;
@@ -356,17 +401,7 @@ a {
     margin-bottom: 23px;
 }
 
-.job-icon {
-    width: 48px;
-    height: 48px;
-    background: #edf2fa;
-    color: var(--primary);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 22px;
-    border-radius: 10px;
-}
+
 
 .job-type {
     background: #edf5f1;
@@ -460,10 +495,11 @@ a {
 /* =========================================
    WHY ARTANA
 ========================================= */
-
 .why-section {
-    background: #edf2f8;
+    background: #ffffff;
     padding: 85px 0;
+    border-radius: 15px;
+    box-shadow: 0 25px 60px rgba(20,45,80,0.09);;
 }
 
 .section-heading-center {
@@ -474,23 +510,13 @@ a {
 .feature-card {
     background: white;
     padding: 30px;
+    box-shadow: 0 18px 40px rgba(20,45,80,0.09);
     border-radius: 12px;
     height: 100%;
     border: 1px solid var(--border);
 }
 
-.feature-icon {
-    width: 55px;
-    height: 55px;
-    background: #edf2fa;
-    color: var(--primary);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 24px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
+
 
 .feature-card h4 {
     font-size: 18px;

@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . '/functions.php';
 
@@ -17,30 +16,35 @@ $flash = get_flash();
 </head>
 <body>
 
-<a class="navbar-brand d-flex align-items-center gap-3"
-   href="<?= BASE_URL ?>/index.php">
+<nav class="navbar navbar-expand-lg main-navbar">
+    <div class="container">
 
-    <img
-        src="<?= BASE_URL ?>/assets/images/logo.jpeg"
-        alt="Logo ARTANA"
-        style="width: 55px; height: 55px; object-fit: contain;"
-    >
+        <a class="navbar-brand brand-box d-flex align-items-center gap-3"
+           href="<?= BASE_URL ?>/index.php">
 
-    <span class="fw-bold text-white"
-          style="font-size: 22px; letter-spacing: 1px;">
-        ARTANA ATS
-    </span>
+            <img
+                src="<?= BASE_URL ?>/assets/images/logo.jpeg"
+                alt="Logo ARTANA"
+                class="brand-logo-img"
+            >
 
-</a>
+            <span class="fw-bold brand-title">
+                ARTANA CORPORATION
+            </span>
+
+        </a>
 
         <button class="navbar-toggler" type="button"
                 data-bs-toggle="collapse"
-                data-bs-target="#navbarMenu">
+                data-bs-target="#navbarMenu"
+                aria-controls="navbarMenu"
+                aria-expanded="false"
+                aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarMenu">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
 
                 <li class="nav-item">
                     <a class="nav-link" href="<?= BASE_URL ?>/index.php?page=home">
@@ -110,6 +114,7 @@ $flash = get_flash();
 
             </ul>
         </div>
+
     </div>
 </nav>
 

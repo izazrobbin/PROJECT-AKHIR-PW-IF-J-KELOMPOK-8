@@ -54,8 +54,9 @@ unset($_SESSION['flash']);
 
             <div class="auth-information">
 
-                <span class="section-label">
-                    WELCOME TO ARTANA ATS
+                <span class="section-label"style="color: #f9f9f9;">
+                    WELCOME TO ARTANA CORPORATION
+                    
                 </span>
 
                 <h1>
